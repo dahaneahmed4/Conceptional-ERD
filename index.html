@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Employee System | Architecture Dashboard</title>
+    <style>
+        /* ================================================================
+         1. CSS VARIABLES & THEME SETUP
+         ================================================================ 
+        */
+        :root {
+            /* Palette: Deep Space / Neon Data */
+            --bg-body: #0f172a;
+            --bg-panel: #1e293b;
+            --bg-card: rgba(30, 41, 59, 0.7);
+            --border-color: #334155;
+            
+            /* Accents */
+            --primary: #3b82f6;   /* Blue */
+            --secondary: #8b5cf6; /* Purple */
+            --success: #10b981;   /* Green */
+            --warning: #f59e0b;   /* Orange/Gold */
+            --danger: #ef4444;    /* Red */
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+
+            /* Spacing & Effects */
+            --radius: 12px;
+            --shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+            --glow: 0 0 20px rgba(59, 130, 246, 0.15);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            height: 100vh;
+            display: flex;
+            overflow: hidden; /* App-like feel */
+        }
+
+        /* ================================================================
+         2. LAYOUT: SIDEBAR & MAIN
+         ================================================================ 
+        */
+        .sidebar {
+            width: 260px;
+            background: var(--bg-panel);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            z-index: 10;
+        }
+
+        .logo-area {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 40px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .nav-item {
+            padding: 12px 15px;
+            border-radius: var(--radius);
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 5px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.95rem;
+        }
+
+        .nav-item:hover, .nav-item.active {
+            background: rgba(59, 130, 246, 0.1);
+            color: var(--primary);
+        }
+
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .header {
+            height: 70px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 30px;
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(10px);
+        }
+
+        /* ================================================================
+         3. DASHBOARD WIDGETS
+         ================================================================ 
+        */
+        .dashboard-container {
+            padding: 30px;
+            overflow-y: auto;
+            height: 100%;
+        }
+
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .kpi-card {
+            background: linear-gradient(145deg, var(--bg-panel), #253147);
+            padding: 20px;
+            border-radius: var(--radius);
+            border: 1px solid var(--border-color);
+            box-shadow: var(--shadow);
+        }
+
+        .kpi-label { font-size: 0.85rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
+        .kpi-value { font-size: 1.8rem; font-weight: 700; margin-top: 5px; color: var(--text-main); }
+        .kpi-trend { font-size: 0.8rem; color: var(--success); margin-top: 5px; }
+
+        /* ================================================================
+         4. VISUALIZATION CANVAS (THE ER DIAGRAM)
+         ================================================================ 
+        */
+        .diagram-wrapper {
+            background: #131c2e;
+            border-radius: var(--radius);
+            border: 1px solid var(--border-color);
+            height: 600px;
+            position: relative;
+            overflow: hidden; /* Contains the SVG and Nodes */
+            box-shadow: inset 0 0 50px rgba(0,0,0,0.5);
+            background-image: 
+                radial-gradient(var(--border-color) 1px, transparent 1px);
+            background-size: 30px 30px; /* Grid Pattern */
+        }
+
+        .toolbar {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: var(--bg-panel);
+            padding: 5px 10px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            z-index: 5;
+        }
+
+        /* DATABASE TABLES (NODES) */
+        .db-table {
+            position: absolute;
+            width: 240px;
+            background: var(--bg-panel);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 15px 30px rgba(0,0,0,0.4);
+            z-index: 2;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .db-table:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+            border-color: var(--primary);
+            z-index: 10;
+        }
+
+        .table-header {
+            padding: 10px 15px;
+            border-bottom: 2px solid;
+            font-weight: bold;
+            font-size: 0.95rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-radius: 8px 8px 0 0;
+        }
+
+        /* Specific Table Colors */
+        .tbl-dept .table-header { background: rgba(59, 130, 246, 0.1); color: var(--primary); border-color: var(--primary); }
+        .tbl-emp .table-header { background: rgba(16, 185, 129, 0.1); color: var(--success); border-color: var(--success); }
+        .tbl-proj .table-header { background: rgba(245, 158, 11, 0.1); color: var(--warning); border-color: var(--warning); }
+        .tbl-assoc .table-header { background: rgba(239, 68, 68, 0.1); color: var(--danger); border-color: var(--danger); }
+
+        .table-body { padding: 0; }
+
+        .row {
+            padding: 8px 15px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            font-family: 'Consolas', monospace;
+            font-size: 0.85rem;
+            display: flex;
+            justify-content: space-between;
+            color: var(--text-muted);
+        }
+        
+        .row:last-child { border-bottom: none; }
+        .row span.type { opacity: 0.5; font-size: 0.75rem; }
+
+        /* KEYS */
+        .pk-badge { color: #facc15; font-weight: bold; margin-right: 5px; }
+        .fk-badge { color: #f472b6; font-weight: bold; margin-right: 5px; }
+
+        /* SVG CONNECTORS LAYER */
+        svg.connections {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        /* ================================================================
+         5. DETAILED SECTIONS & CONCLUSION
+         ================================================================ 
+        */
+        .details-section {
+            margin-top: 30px;
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 20px;
+        }
+
+        .panel {
+            background: var(--bg-panel);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius);
+            padding: 25px;
+        }
+
+        h2 { color: var(--text-main); font-size: 1.4rem; margin-bottom: 20px; border-left: 4px solid var(--primary); padding-left: 15px; }
+        h3 { color: var(--text-main); font-size: 1.1rem; margin-top: 20px; margin-bottom: 10px; }
+        p { line-height: 1.7; color: var(--text-muted); margin-bottom: 15px; font-size: 0.95rem; }
+        
+        ul.specs { list-style: none; padding: 0; }
+        ul.specs li { 
+            background: rgba(255,255,255,0.03); 
+            margin-bottom: 8px; 
+            padding: 10px; 
+            border-radius: 6px; 
+            border-left: 2px solid var(--border-color);
+        }
+        ul.specs li strong { color: var(--text-main); }
+
+        .tag {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        .tag-1n { background: rgba(59, 130, 246, 0.2); color: var(--primary); }
+        .tag-mn { background: rgba(239, 68, 68, 0.2); color: var(--danger); }
+
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <div class="logo-area">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+            ARCHITECT.io
+        </div>
+        <div class="nav-item active">Dashboard Overview</div>
+        <div class="nav-item">Entity Dictionary</div>
+        <div class="nav-item">Relationship Logic</div>
+        <div class="nav-item">System Settings</div>
+        
+        <div style="margin-top: auto; padding-top: 20px; border-top: 1px solid var(--border-color);">
+            <div style="font-size: 0.8rem; color: var(--text-muted);">Version 2.4.0</div>
+            <div style="font-size: 0.7rem; color: #475569;">Build: Stable</div>
+        </div>
+    </div>
+
+    <div class="main-content">
+        
+        <div class="header">
+            <div>
+                <h1 style="font-size: 1.2rem; margin: 0;">Employee Participation System</h1>
+                <span style="font-size: 0.8rem; color: var(--success);">● System Operational</span>
+            </div>
+            <div>
+                <button style="background: var(--primary); border: none; color: white; padding: 8px 16px; border-radius: 6px; font-weight: 600; cursor: pointer;">Export Schema</button>
+            </div>
+        </div>
+
+        <div class="dashboard-container">
+
+            <div class="kpi-grid">
+                <div class="kpi-card">
+                    <div class="kpi-label">Total Entities</div>
+                    <div class="kpi-value">3</div>
+                    <div class="kpi-trend">Core Structures</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">Relationships</div>
+                    <div class="kpi-value">3</div>
+                    <div class="kpi-trend">Fully Normalized</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">Complexity</div>
+                    <div class="kpi-value">M:N</div>
+                    <div class="kpi-trend" style="color: var(--warning);">High Fidelity</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">Database Model</div>
+                    <div class="kpi-value">Relational</div>
+                    <div class="kpi-trend">3rd Normal Form</div>
+                </div>
+            </div>
+
+            <h2 style="border: none; padding: 0;">Entity Relationship Diagram (ERD)</h2>
+            <div class="diagram-wrapper">
+                <div class="toolbar">Mode: Crow's Foot Notation • Zoom: 100%</div>
+
+                <svg class="connections">
+                    <defs>
+                        <marker id="one" markerWidth="12" markerHeight="12" refX="0" refY="6" orient="auto">
+                            <path d="M0,6 L12,6 M6,0 L6,12" stroke="#64748b" stroke-width="2" fill="none"/>
+                        </marker>
+                        <marker id="many" markerWidth="12" markerHeight="12" refX="0" refY="6" orient="auto">
+                            <path d="M0,6 L10,6 M10,0 L0,6 L10,12" stroke="#64748b" stroke-width="2" fill="none"/>
+                        </marker>
+                    </defs>
+                    
+                    <path d="M 400 130 L 520 130 L 520 280 L 300 280 L 300 350" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#many)" />
+                    
+                    <path d="M 400 130 L 520 130 L 520 280 L 800 280 L 800 350" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#many)" />
+
+                    <path d="M 300 520 L 300 560 L 550 560" fill="none" stroke="#94a3b8" stroke-width="2" stroke-dasharray="5,5" marker-end="url(#one)" />
+
+                    <path d="M 800 520 L 800 560 L 550 560" fill="none" stroke="#94a3b8" stroke-width="2" stroke-dasharray="5,5" marker-end="url(#one)" />
+
+                </svg>
+
+                <div class="db-table tbl-dept" style="top: 50px; left: 280px;">
+                    <div class="table-header">
+                        <span>DEPARTMENT</span>
+                        <span>1</span>
+                    </div>
+                    <div class="table-body">
+                        <div class="row"><span style="color:white;"><span class="pk-badge">PK</span>Num_S</span> <span class="type">INT</span></div>
+                        <div class="row"><span>Label</span> <span class="type">VARCHAR</span></div>
+                        <div class="row"><span>Manager_Name</span> <span class="type">VARCHAR</span></div>
+                    </div>
+                </div>
+
+                <div class="db-table tbl-emp" style="top: 350px; left: 180px;">
+                    <div class="table-header">
+                        <span>EMPLOYEE</span>
+                        <span>∞</span>
+                    </div>
+                    <div class="table-body">
+                        <div class="row"><span style="color:white;"><span class="pk-badge">PK</span>Num_E</span> <span class="type">INT</span></div>
+                        <div class="row"><span style="color:#f472b6;"><span class="fk-badge">FK</span>Num_S</span> <span class="type">INT</span></div>
+                        <div class="row"><span>Name</span> <span class="type">VARCHAR</span></div>
+                        <div class="row"><span>Position</span> <span class="type">VARCHAR</span></div>
+                        <div class="row"><span>Salary</span> <span class="type">DECIMAL</span></div>
+                    </div>
+                </div>
+
+                <div class="db-table tbl-proj" style="top: 350px; left: 680px;">
+                    <div class="table-header">
+                        <span>PROJECT</span>
+                        <span>∞</span>
+                    </div>
+                    <div class="table-body">
+                        <div class="row"><span style="color:white;"><span class="pk-badge">PK</span>Num_P</span> <span class="type">INT</span></div>
+                        <div class="row"><span style="color:#f472b6;"><span class="fk-badge">FK</span>Num_S</span> <span class="type">INT</span></div>
+                        <div class="row"><span>Title</span> <span class="type">VARCHAR</span></div>
+                        <div class="row"><span>Start_Date</span> <span class="type">DATE</span></div>
+                        <div class="row"><span>End_Date</span> <span class="type">DATE</span></div>
+                    </div>
+                </div>
+
+                <div class="db-table tbl-assoc" style="top: 520px; left: 430px; border-style: dashed;">
+                    <div class="table-header">
+                        <span>PARTICIPATION</span>
+                        <span>Link</span>
+                    </div>
+                    <div class="table-body">
+                        <div class="row"><span style="color:#f472b6;"><span class="fk-badge">FK</span>Num_E</span> <span class="type">INT</span></div>
+                        <div class="row"><span style="color:#f472b6;"><span class="fk-badge">FK</span>Num_P</span> <span class="type">INT</span></div>
+                        <div class="row" style="background: rgba(239, 68, 68, 0.1); color: white;"><span>Role</span> <span class="type">TEXT</span></div>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="details-section">
+                
+                <div class="panel">
+                    <h2>Relationship Logic & Analysis</h2>
+                    
+                    <h3>1. Department Management (1:N)</h3>
+                    <p>
+                        The <strong style="color: var(--primary);">Department</strong> is the central organizational unit. The prompt states "An employee can only work in one department" and "A project is specific to one department." This dictates a strict hierarchy where the Department Primary Key (<code>Num_S</code>) must exist inside both the Employee and Project tables as a Foreign Key.
+                    </p>
+
+                    <h3>2. The Project-Employee Paradox (M:N)</h3>
+                    <p>
+                        We have a complex scenario: "Employees are assigned to various projects."
+                        <br>
+                        1. One Employee -> Many Projects.
+                        <br>
+                        2. One Project -> Many Employees.
+                        <br>
+                        This creates a <strong>Many-to-Many</strong> relationship. In Relational Database Design, we cannot store multiple project IDs in a single cell of the Employee table.
+                    </p>
+
+                    <h3>3. The "Role" Solution</h3>
+                    <p>
+                        The prompt asks to track the <strong>Role</strong>. The Role depends on <em>both</em> the person and the project (e.g., John is a "Manager" on Project A, but an "Analyst" on Project B). Therefore, we create the <strong>Participation</strong> entity (shown in dashed red above). This table holds the pair of keys and the specific Role attribute.
+                    </p>
+                </div>
+
+                <div class="panel">
+                    <h2>Entity Specs</h2>
+                    <ul class="specs">
+                        <li>
+                            <strong>Department</strong>
+                            <br><span style="font-size:0.8rem; color:var(--text-muted);">Parent Entity</span>
+                            <div style="margin-top:5px;">
+                                <span class="tag tag-1n">1:N with Emp</span>
+                                <span class="tag tag-1n">1:N with Proj</span>
+                            </div>
+                        </li>
+                        <li>
+                            <strong>Employee</strong>
+                            <br><span style="font-size:0.8rem; color:var(--text-muted);">Child Entity</span>
+                            <div style="margin-top:5px;">
+                                Contains FK: <code>Num_S</code>
+                            </div>
+                        </li>
+                        <li>
+                            <strong>Project</strong>
+                            <br><span style="font-size:0.8rem; color:var(--text-muted);">Child Entity</span>
+                            <div style="margin-top:5px;">
+                                Contains FK: <code>Num_S</code>
+                            </div>
+                        </li>
+                    </ul>
+
+                    <div style="margin-top: 30px; background: rgba(16, 185, 129, 0.1); padding: 15px; border-radius: 8px; border: 1px solid var(--success);">
+                        <strong style="color: var(--success);">Conclusion</strong>
+                        <p style="margin: 5px 0 0 0; font-size: 0.85rem; color: var(--text-main);">
+                            The ER model successfully handles all constraints. By normalizing the data into 4 distinct structures, we ensure data integrity. No employee belongs to two departments (1:N enforced), and role data is decoupled from personal data (M:N handled via Association).
+                        </p>
+                    </div>
+                </div>
+
+            </div>
+            
+            <div style="height: 50px;"></div> </div>
+    </div>
+
+    <script>
+        // Add simple hover console logging for demo purposes
+        const tables = document.querySelectorAll('.db-table');
+        tables.forEach(table => {
+            table.addEventListener('mouseenter', () => {
+                table.style.borderColor = 'white';
+            });
+            table.addEventListener('mouseleave', () => {
+                table.style.borderColor = 'var(--border-color)';
+                // Re-apply specific colors based on class
+                if(table.classList.contains('tbl-dept')) table.style.borderColor = 'var(--border-color)';
+            });
+        });
+    </script>
+</body>
+</html>
